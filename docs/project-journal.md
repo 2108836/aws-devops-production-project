@@ -38,3 +38,37 @@ Define the project requirements, initialise the repository, and design the first
 
 ### Next Step
 Begin building the AWS network infrastructure with Terraform.
+
+
+## Day 2
+
+### Objective
+Build and deploy the AWS networking foundation using Terraform.
+
+### Completed
+- Configured the AWS Terraform provider and region variable.
+- Initialised and validated the Terraform project.
+- Created a custom VPC with DNS support enabled.
+- Created two public and two private subnets across two Availability Zones.
+- Created and attached an Internet Gateway.
+- Created public and private route tables.
+- Associated the correct subnets with their route tables.
+- Created an Elastic IP and NAT Gateway for private subnet outbound connectivity.
+- Reviewed the Terraform plan before deployment.
+- Deployed 14 AWS resources using Terraform.
+- Verified the VPC, subnets, route tables, and NAT Gateway in the AWS Console.
+- Verified all managed resources using `terraform state list`.
+
+### Troubleshooting / Mistakes
+- Corrected Terraform resource references such as `.id`.
+- Fixed exact Terraform argument names and case sensitivity.
+- Fixed route table association mistakes between public and private subnets.
+- Fixed an incorrectly quoted Terraform reference.
+- Resolved an expired AWS authentication session.
+- Verified that Terraform state and provider files are excluded from Git.
+
+### Key Learning
+Public subnets route internet traffic through an Internet Gateway, while private subnets use a NAT Gateway for outbound internet access without directly exposing backend EC2 instances.
+
+### Next Step
+Build the application compute layer, including security groups, IAM access, Launch Template, Auto Scaling Group, Target Group, and Application Load Balancer.

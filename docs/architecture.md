@@ -37,3 +37,17 @@ An IAM Role is an AWS identity that contains permissions. AWS services such as E
 
 ### Amazon ECR
 Amazon Elastic Container Registry (ECR) is AWS's container image registry. Docker images can be stored in ECR and later pulled by EC2 instances during application deployment.
+
+## AWS Network Architecture
+
+The project uses a custom VPC with the CIDR range `10.0.0.0/16` as the private network for the application infrastructure.
+
+Two public subnets and two private subnets are distributed across two Availability Zones to provide better availability.
+
+The public subnets use a public route table with a default route to the Internet Gateway. These subnets will be used for internet-facing infrastructure such as the Application Load Balancer and NAT Gateway.
+
+The private subnets use a private route table with a default route to the NAT Gateway. This allows backend EC2 instances to access the internet for tasks such as downloading packages or pulling container images while keeping the instances inaccessible directly from the public internet.
+
+Each public subnet is associated with the public route table, while each private subnet is associated with the private route table.
+
+The application EC2 instances will later be launched inside the private subnets.

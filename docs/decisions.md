@@ -51,3 +51,10 @@ Using commit-based Docker image tags makes each image version uniquely identifia
 This makes deployments easier to audit and helps us identify the exact image version that is currently running.
 
 If a deployment fails, the previous known-good image tag can be used for a fast and reliable rollback instead of relying only on the ambiguous `latest` tag.
+
+
+## Private EC2 Behind an Application Load Balancer
+
+The application EC2 instances are placed in private subnets so they are not directly exposed to the internet. Public user traffic enters through the internet-facing Application Load Balancer, which forwards only the required application traffic to the private EC2 instances.
+
+The private subnets use a private route table with a NAT Gateway for outbound internet access, allowing the instances to reach services such as ECR and Systems Manager without receiving public IP addresses. This reduces the attack surface and keeps the application servers isolated from direct public access.

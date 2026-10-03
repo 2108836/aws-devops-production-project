@@ -72,3 +72,14 @@ Public subnets route internet traffic through an Internet Gateway, while private
 
 ### Next Step
 Build the application compute layer, including security groups, IAM access, Launch Template, Auto Scaling Group, Target Group, and Application Load Balancer.
+
+## Day 3 — Secure Compute and Load Balancing Foundation
+
+- Configured separate security groups for the ALB and private EC2 instances so traffic is allowed only where required. The ALB accepts HTTP traffic from the internet, while EC2 accepts application traffic only from the ALB on port 5000.
+
+- Created an EC2 IAM role and instance profile. EC2 can assume this role to communicate with AWS Systems Manager for secure remote management without public SSH, and to read/pull container images from Amazon ECR.
+
+- Configured an internet-facing Application Load Balancer, listener and target group. The ALB receives requests on port 80 and forwards them to application instances on port 5000. The target group uses the `/health` endpoint to determine whether the application is healthy before sending traffic to it.
+
+- Created a Launch Template and Auto Scaling Group for the compute layer. The Launch Template defines the AMI, instance type, EC2 security group, IAM instance profile and bootstrap user data. The Auto Scaling Group maintains the required number of EC2 instances across the private subnets and registers them with the target group. The bootstrap script installs Docker, authenticates to ECR, pulls the specified image tag and starts the application container.
+

@@ -1,0 +1,20 @@
+#!/bin/bash
+# Script executes using Bash
+
+set -euo pipefail
+
+dnf install -y docker
+systemctl enable --now docker
+
+# Authenticate Docker with Amazon ECR
+
+AWS_REGION="${aws_region}"
+ECR_REPOSITORY="${ecr_repository_url}"
+IMAGE_TAG="${image_tag}"
+ECR_REGISTRY=$(echo "$ECR_REPOSITORY" | cut -d/ -f1)
+aws ecr get-login-password --region "$AWS_REGION" \
+  | docker login --username AWS --password-stdin "$ECR_REGISTRY"
+
+docker pull "$ECR_REPOSITORY:$IMAGE_TAG"
+  
+docker run --restart unless-stopped -d --name app -p 5000:5000 "$ECR_REPOSITORY:$IMAGE_TAG"

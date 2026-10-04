@@ -83,3 +83,15 @@ Build the application compute layer, including security groups, IAM access, Laun
 
 - Created a Launch Template and Auto Scaling Group for the compute layer. The Launch Template defines the AMI, instance type, EC2 security group, IAM instance profile and bootstrap user data. The Auto Scaling Group maintains the required number of EC2 instances across the private subnets and registers them with the target group. The bootstrap script installs Docker, authenticates to ECR, pulls the specified image tag and starts the application container.
 
+
+## Day 4 — Containerised Application Deployment
+
+- Created a Flask application with `/` and `/health` endpoints for application traffic and load balancer health checks.
+- Built and tested the Docker image locally, verifying both application endpoints on port 5000.
+- Tagged the tested Docker image using Git commit SHA `857e0df` to provide a traceable and immutable deployment version.
+- Pushed the SHA-tagged Docker image to the private Amazon ECR repository.
+- Applied the Terraform configuration to deploy the production-style AWS infrastructure and application workload.
+- Verified that the Auto Scaling Group maintained two healthy private EC2 instances and that both targets passed the Application Load Balancer health checks.
+- Confirmed the application was publicly reachable through the ALB while the EC2 instances remained private.
+- Verified that the EC2 instances were manageable through AWS Systems Manager without exposing SSH port 22.
+- Troubleshot Docker/ECR authentication and IAM permission issues during deployment, including Windows Docker credential handling and missing IAM role-management permissions.

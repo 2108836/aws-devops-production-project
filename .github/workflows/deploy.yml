@@ -1,0 +1,51 @@
+name: Deploy Application
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::319604804922:role/devops-prod-github-actions-role
+          aws-region: eu-north-1
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push Docker image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: devops-prod-app
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG ./app
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+
+      - name: Update deployment image tag
+        run: |
+          aws ssm put-parameter \
+            --name "/devops-prod/image-tag" \
+            --value "${{ github.sha }}" \
+            --type "String" \
+            --overwrite
+
+      - name: Start Auto Scaling instance refresh
+        run: |
+          aws autoscaling start-instance-refresh \
+            --auto-scaling-group-name devops-prod-app-asg \
+            --preferences '{"MinHealthyPercentage":50,"InstanceWarmup":180}'

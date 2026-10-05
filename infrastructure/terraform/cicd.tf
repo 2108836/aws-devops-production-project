@@ -4,13 +4,10 @@
 # issued by GitHub Actions.
 ############################################
 
-resource "aws_iam_openid_connect_provider" "github" {
+data "aws_iam_openid_connect_provider" "github" {
   url = "https://token.actions.githubusercontent.com"
-
-  client_id_list = [
-    "sts.amazonaws.com"
-  ]
 }
+
 
 
 ############################################
@@ -36,7 +33,7 @@ data "aws_iam_policy_document" "github_trust" {
       type = "Federated"
 
       identifiers = [
-        aws_iam_openid_connect_provider.github.arn
+        data.aws_iam_openid_connect_provider.github.arn
       ]
     }
 
@@ -175,3 +172,5 @@ resource "aws_iam_role_policy" "github_permissions" {
   role   = aws_iam_role.github_actions.name
   policy = data.aws_iam_policy_document.github_permissions.json
 }
+
+

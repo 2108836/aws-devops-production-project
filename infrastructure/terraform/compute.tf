@@ -21,10 +21,16 @@ resource "aws_launch_template" "app" {
   instance_type = "t3.micro"
 
   user_data = base64encode(templatefile("${path.module}/bootstrap.sh.tftpl", {
-    aws_region         = var.aws_region
-    ecr_repository_url = aws_ecr_repository.app.repository_url
-    image_tag          = var.image_tag
+    aws_region               = var.aws_region
+    ecr_repository_url       = aws_ecr_repository.app.repository_url
+    image_tag_parameter_name = aws_ssm_parameter.image_tag.name
   }))
+
+  depends_on = [
+    aws_iam_role_policy.parameter_read,
+    aws_iam_role_policy_attachment.ecr,
+    aws_iam_role_policy_attachment.ssm
+  ]
 
   vpc_security_group_ids = [
     aws_security_group.ec2_sg.id

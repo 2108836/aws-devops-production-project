@@ -51,3 +51,22 @@ resource "aws_iam_instance_profile" "ec2_profile" {
   name = "devops-prod-ec2-profile"
   role = aws_iam_role.ec2_role.name
 }
+
+
+###### IAM role policy #################
+
+resource "aws_iam_role_policy" "parameter_read" {
+  role = aws_iam_role.ec2_role.name
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+
+    Statement = [
+      {
+        Effect   = "Allow"
+        Action   = ["ssm:GetParameter"]
+        Resource = aws_ssm_parameter.image_tag.arn
+      }
+    ]
+  })
+}

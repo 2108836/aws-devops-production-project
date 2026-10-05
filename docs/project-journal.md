@@ -95,3 +95,22 @@ Build the application compute layer, including security groups, IAM access, Laun
 - Confirmed the application was publicly reachable through the ALB while the EC2 instances remained private.
 - Verified that the EC2 instances were manageable through AWS Systems Manager without exposing SSH port 22.
 - Troubleshot Docker/ECR authentication and IAM permission issues during deployment, including Windows Docker credential handling and missing IAM role-management permissions.
+
+
+## Day 5 — Automated CI/CD Deployment with GitHub Actions and OIDC
+
+- Created a GitHub Actions deployment workflow triggered by pushes to the `main` branch.
+- Configured GitHub OIDC authentication so GitHub Actions can assume an AWS IAM role using temporary credentials instead of stored AWS access keys.
+- Reused the existing GitHub OIDC provider in the AWS account through a Terraform data source rather than creating a duplicate provider.
+- Restricted the GitHub Actions IAM trust policy to this repository and the `main` branch using GitHub's immutable OIDC subject claim.
+- Configured least-privilege GitHub Actions permissions for Amazon ECR image uploads, SSM Parameter Store updates and Auto Scaling instance refreshes.
+- Created `/devops-prod/image-tag` in SSM Parameter Store to act as the deployment pointer for the currently required Docker image SHA.
+- Updated the EC2 bootstrap process so new instances read the image SHA from Parameter Store, authenticate with ECR, pull the matching image and start the application container.
+- Seeded ECR with the previously tested bootstrap image `857e0df` so the initial Auto Scaling Group deployment could start successfully.
+- Successfully deployed the AWS infrastructure with Terraform and verified two private EC2 instances became healthy behind the Application Load Balancer.
+- Pushed the CI/CD configuration to GitHub and successfully deployed image `0c2e331598590795b4102e636782191e9d0a6246` through GitHub Actions.
+- Verified that GitHub Actions updated the SSM deployment pointer and started an Auto Scaling Group instance refresh.
+- Confirmed replacement EC2 instances pulled and ran the exact Git SHA-tagged image from ECR and that the instance refresh completed successfully at 100%.
+- Verified the application remained publicly reachable through the ALB after the automated rolling deployment.
+- Troubleshot IAM permissions, Terraform resource tainting and a GitHub OIDC authentication failure caused by GitHub's immutable subject claim format.
+- Removed ECR images and destroyed the Terraform-managed AWS infrastructure after testing to avoid unnecessary NAT Gateway, ALB and EC2 costs.

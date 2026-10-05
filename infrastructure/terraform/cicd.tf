@@ -54,7 +54,7 @@ data "aws_iam_policy_document" "github_trust" {
       variable = "token.actions.githubusercontent.com:sub"
 
       values = [
-        "repo:2108836/aws-devops-production-project:ref:refs/heads/main"
+        "repo:2108836@237055730/aws-devops-production-project@1405436461:ref:refs/heads/main"
       ]
     }
   }

@@ -114,3 +114,39 @@ Build the application compute layer, including security groups, IAM access, Laun
 - Verified the application remained publicly reachable through the ALB after the automated rolling deployment.
 - Troubleshot IAM permissions, Terraform resource tainting and a GitHub OIDC authentication failure caused by GitHub's immutable subject claim format.
 - Removed ECR images and destroyed the Terraform-managed AWS infrastructure after testing to avoid unnecessary NAT Gateway, ALB and EC2 costs.
+
+## Day 6 — Production Hardening, Monitoring and Final Deployment Verification
+
+- Replaced the Flask development server with Gunicorn to provide a more appropriate production-style application runtime inside the Docker container.
+- Built and tested the updated Docker image locally and verified both the application and `/health` endpoints successfully.
+- Added a CPU target tracking Auto Scaling policy configured to maintain approximately 50% average CPU utilisation while scaling between the existing minimum and maximum ASG capacity.
+- Added an Amazon CloudWatch alarm monitoring the Application Load Balancer `UnHealthyHostCount` metric to detect unhealthy application targets.
+- Extended the GitHub Actions IAM permissions so the deployment workflow can query Auto Scaling Instance Refresh status after starting a deployment.
+- Improved the GitHub Actions workflow so it captures the Instance Refresh ID and polls AWS until the refresh completes successfully instead of reporting success immediately after the refresh request is accepted.
+- Added deployment failure handling for failed, cancelled and rollback-related Instance Refresh states, together with a deployment timeout.
+- Added an `app/**` workflow path filter so documentation-only changes do not unnecessarily trigger application deployments.
+- Rebuilt the AWS infrastructure with Terraform and verified two EC2 application instances became `InService` and healthy behind the Application Load Balancer.
+- Verified the CPU target tracking policy was configured correctly and the CloudWatch unhealthy-target alarm remained in the `OK` state.
+- Completed the final end-to-end CI/CD deployment through GitHub Actions using Git commit SHA `3552949e4dd15854bb3f7559ed184a648156c53a`.
+- Verified the same Git SHA was stored as the Amazon ECR image tag and as the deployment value in SSM Parameter Store.
+- Confirmed the Auto Scaling Instance Refresh replaced the previous EC2 instances with new healthy instances.
+- Verified replacement instances `i-09295b0987e55fd00` and `i-0ee322de733af464d` were both `InService` and healthy.
+- Confirmed both replacement instances registered successfully as healthy Application Load Balancer targets.
+- Verified the deployed application remained publicly reachable through the Application Load Balancer after the completed rolling deployment.
+- Troubleshot Docker Desktop and Amazon ECR image upload failures caused by proxy/network upload behaviour. Reduced Docker concurrent layer uploads to allow the image push to complete successfully.
+- Identified a Session Manager console access failure as an IAM permission issue on the human `devops-user` identity rather than an EC2 networking, instance-role or SSM Agent problem. The target EC2 instance remained healthy and its SSM Agent was online.
+- Updated the project README to document the final architecture, CI/CD deployment flow, security model, monitoring, Auto Scaling, immutable deployment strategy, troubleshooting experience, limitations and future improvements.
+
+### Key Learning
+
+A successful deployment should be verified across the complete delivery path rather than relying only on a successful CI/CD command.
+
+The final deployment was validated through:
+
+`Git commit → GitHub Actions → ECR image → SSM deployment pointer → Auto Scaling Instance Refresh → replacement EC2 instances → ALB health checks → application response`
+
+The project also reinforced the importance of separating infrastructure management from application deployment, using immutable application versions, monitoring deployment progress, applying least-privilege IAM, and diagnosing problems at the correct layer.
+
+### Next Step
+
+Complete the remaining project documentation, perform final repository checks, remove temporary local deployment credentials and test containers, and destroy the AWS infrastructure to avoid unnecessary NAT Gateway, Application Load Balancer and EC2 costs.

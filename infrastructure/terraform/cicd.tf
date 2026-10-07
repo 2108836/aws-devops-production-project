@@ -1,7 +1,7 @@
 ############################################
 # GitHub OIDC Provider
-# Allows AWS IAM to trust identity tokens
-# issued by GitHub Actions.
+# Reuse the existing GitHub OIDC provider
+# already configured in this AWS account.
 ############################################
 
 data "aws_iam_openid_connect_provider" "github" {
@@ -9,18 +9,15 @@ data "aws_iam_openid_connect_provider" "github" {
 }
 
 
-
 ############################################
 # GitHub Actions Trust Policy
-# Defines WHO is allowed to assume the
-# GitHub Actions IAM role.
 #
-# Access is restricted to:
-# - Repository: 2108836/aws-devops-production-project
-# - Branch: main
+# Defines WHO can assume the GitHub Actions
+# IAM role through GitHub OIDC.
 ############################################
 
 data "aws_iam_policy_document" "github_trust" {
+
   statement {
     effect = "Allow"
 
@@ -28,7 +25,6 @@ data "aws_iam_policy_document" "github_trust" {
       "sts:AssumeRoleWithWebIdentity"
     ]
 
-    # Trust the GitHub OIDC provider.
     principals {
       type = "Federated"
 
@@ -37,7 +33,7 @@ data "aws_iam_policy_document" "github_trust" {
       ]
     }
 
-    # Ensure the token is intended for AWS STS.
+    # Token must be intended for AWS STS.
     condition {
       test     = "StringEquals"
       variable = "token.actions.githubusercontent.com:aud"
@@ -47,8 +43,8 @@ data "aws_iam_policy_document" "github_trust" {
       ]
     }
 
-    # Restrict role assumption to the main branch
-    # of this specific GitHub repository.
+    # Restrict access to this repository's
+    # main branch using GitHub's immutable subject.
     condition {
       test     = "StringEquals"
       variable = "token.actions.githubusercontent.com:sub"
@@ -63,6 +59,7 @@ data "aws_iam_policy_document" "github_trust" {
 
 ############################################
 # GitHub Actions IAM Role
+#
 # GitHub Actions assumes this role through
 # OIDC and receives temporary AWS credentials.
 ############################################
@@ -75,17 +72,16 @@ resource "aws_iam_role" "github_actions" {
 
 
 ############################################
-# GitHub Actions Permissions
-# Defines WHAT the GitHub Actions role is
-# allowed to do after assuming the role.
+# GitHub Actions Permission Policy
+#
+# Defines WHAT GitHub Actions can do
+# after assuming the IAM role.
 ############################################
 
 data "aws_iam_policy_document" "github_permissions" {
 
   ##########################################
-  # Allow authentication with Amazon ECR.
-  # GetAuthorizationToken requires "*"
-  # rather than a repository-specific ARN.
+  # ECR authentication
   ##########################################
 
   statement {
@@ -100,8 +96,8 @@ data "aws_iam_policy_document" "github_permissions" {
 
 
   ##########################################
-  # Allow Docker image uploads only to the
-  # application's specific ECR repository.
+  # Push Docker images only to this
+  # project's ECR repository.
   ##########################################
 
   statement {
@@ -122,8 +118,7 @@ data "aws_iam_policy_document" "github_permissions" {
 
 
   ##########################################
-  # Allow GitHub Actions to update the
-  # desired application image SHA stored
+  # Update the desired image SHA stored
   # in SSM Parameter Store.
   ##########################################
 
@@ -141,12 +136,7 @@ data "aws_iam_policy_document" "github_permissions" {
 
 
   ##########################################
-  # Allow GitHub Actions to start an
-  # Auto Scaling Group instance refresh.
-  #
-  # New EC2 instances will read the updated
-  # image SHA from Parameter Store and pull
-  # that exact image from ECR.
+  # Start deployment by refreshing the ASG.
   ##########################################
 
   statement {
@@ -160,17 +150,34 @@ data "aws_iam_policy_document" "github_permissions" {
       aws_autoscaling_group.app.arn
     ]
   }
+
+
+  ##########################################
+  # Read instance refresh status.
+  #
+  # The CI/CD pipeline will use this to
+  # check whether the deployment actually
+  # completed successfully.
+  ##########################################
+
+  statement {
+    effect = "Allow"
+
+    actions = [
+      "autoscaling:DescribeInstanceRefreshes"
+    ]
+
+    resources = ["*"]
+  }
 }
 
 
 ############################################
-# Attach the permissions above directly
-# to the GitHub Actions IAM role.
+# Attach GitHub deployment permissions
+# directly to the GitHub Actions IAM role.
 ############################################
 
 resource "aws_iam_role_policy" "github_permissions" {
   role   = aws_iam_role.github_actions.name
   policy = data.aws_iam_policy_document.github_permissions.json
 }
-
-

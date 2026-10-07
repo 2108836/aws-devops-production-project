@@ -47,7 +47,44 @@ jobs:
             --overwrite
 
       - name: Start Auto Scaling instance refresh
+        id: instance-refresh
         run: |
-          aws autoscaling start-instance-refresh \
+          REFRESH_ID=$(aws autoscaling start-instance-refresh \
             --auto-scaling-group-name devops-prod-app-asg \
-            --preferences '{"MinHealthyPercentage":50,"InstanceWarmup":180}'
+            --preferences '{"MinHealthyPercentage":50,"InstanceWarmup":180}' \
+            --query "InstanceRefreshId" \
+            --output text)
+
+          echo "refresh_id=$REFRESH_ID" >> "$GITHUB_OUTPUT"
+
+      - name: Wait for instance refresh
+        run: |
+          REFRESH_ID="${{ steps.instance-refresh.outputs.refresh_id }}"
+
+          for attempt in {1..40}; do
+            STATUS=$(aws autoscaling describe-instance-refreshes \
+              --auto-scaling-group-name devops-prod-app-asg \
+              --instance-refresh-ids "$REFRESH_ID" \
+              --query "InstanceRefreshes[0].Status" \
+              --output text)
+
+            echo "Instance refresh status: $STATUS"
+
+            if [ "$STATUS" = "Successful" ]; then
+              echo "Deployment completed successfully."
+              exit 0
+            fi
+
+            if [ "$STATUS" = "Failed" ] || \
+               [ "$STATUS" = "Cancelled" ] || \
+               [ "$STATUS" = "RollbackFailed" ] || \
+               [ "$STATUS" = "RollbackSuccessful" ]; then
+              echo "Deployment failed with status: $STATUS"
+              exit 1
+            fi
+
+            sleep 30
+          done
+
+          echo "Timed out waiting for instance refresh."
+          exit 1
